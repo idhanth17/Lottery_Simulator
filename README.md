@@ -7,8 +7,7 @@ An interactive, in-browser solver for the **"psychic modeling" problem** from St
 > Tickets hold `k` numbers, and matching **`l` or more** wins a prize.
 > **What is the smallest set of tickets that makes a prize mathematically guaranteed?**
 
-**Live demo:** enable GitHub Pages on this repo (Settings → Pages → deploy from `main`) — it's a fully
-static site, no build step.
+**Live demo:** https://idhanth17.github.io/Lottery_Simulator/
 
 ## ✨ What it does
 
