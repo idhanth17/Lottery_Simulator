@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Psychic Lottery Optimizer</title>
+<meta name="description" content="Guaranteed-win lottery ticket optimizer — set cover, greedy approximation and a live lotto simulator. Inspired by Skiena's psychic modeling war story." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="bg-glow" aria-hidden="true"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<header class="hero">
+  <div class="hero-badge">Set cover · NP-hard · but we try anyway</div>
+  <h1><span class="orb">🔮</span> Psychic Lottery Optimizer</h1>
+  <p class="tagline">Your psychic swears some of their numbers will be drawn. We compute the <em>fewest tickets</em> that turn that hunch into a <strong>mathematically guaranteed prize</strong> — then let you run the lottery to prove it.</p>
+</header>
+
+<nav class="stepper" id="stepper">
+  <button class="step active" data-step="1"><span class="step-num">1</span><span class="step-label">The lottery</span></button>
+  <div class="step-line"></div>
+  <button class="step" data-step="2"><span class="step-num">2</span><span class="step-label">Psychic numbers</span></button>
+  <div class="step-line"></div>
+  <button class="step" data-step="3"><span class="step-num">3</span><span class="step-label">Your tickets</span></button>
+  <div class="step-line"></div>
+  <button class="step" data-step="4"><span class="step-num">4</span><span class="step-label">Draw night</span></button>
+</nav>
+
+<main>
+<!-- ══════════════ STEP 1 · CONFIGURE ══════════════ -->
+<section class="panel" id="panel-1">
+  <h2>Design your lottery</h2>
+  <p class="panel-sub">Set the rules of the game and what your psychic is promising.</p>
+
+  <div class="cfg-grid">
+    <div class="cfg-card">
+      <div class="cfg-head"><span class="cfg-icon">🎱</span><label for="inp-m">Number pool</label></div>
+      <p class="cfg-desc">Numbers run from 1 to this. A classic lotto uses 44 or 49.</p>
+      <div class="num-stepper"><button type="button" data-for="inp-m" data-d="-1">−</button><input id="inp-m" type="number" min="10" max="90" value="44" /><button type="button" data-for="inp-m" data-d="1">+</button></div>
+    </div>
+    <div class="cfg-card">
+      <div class="cfg-head"><span class="cfg-icon">🎰</span><label for="inp-t">Numbers drawn</label></div>
+      <p class="cfg-desc">How many balls the machine draws on lottery night.</p>
+      <div class="num-stepper"><button type="button" data-for="inp-t" data-d="-1">−</button><input id="inp-t" type="number" min="2" max="10" value="6" /><button type="button" data-for="inp-t" data-d="1">+</button></div>
+    </div>
+    <div class="cfg-card">
+      <div class="cfg-head"><span class="cfg-icon">🎟️</span><label for="inp-k">Numbers per ticket</label></div>
+      <p class="cfg-desc">How many numbers you mark on each ticket you buy.</p>
+      <div class="num-stepper"><button type="button" data-for="inp-k" data-d="-1">−</button><input id="inp-k" type="number" min="2" max="10" value="6" /><button type="button" data-for="inp-k" data-d="1">+</button></div>
+    </div>
+    <div class="cfg-card psychic">
+      <div class="cfg-head"><span class="cfg-icon">🔮</span><label for="inp-j">Psychic's promise</label></div>
+      <p class="cfg-desc">“At least <b>this many</b> of my numbers will be on the winning draw.”</p>
+      <div class="num-stepper"><button type="button" data-for="inp-j" data-d="-1">−</button><input id="inp-j" type="number" min="1" max="10" value="4" /><button type="button" data-for="inp-j" data-d="1">+</button></div>
+    </div>
+    <div class="cfg-card">
+      <div class="cfg-head"><span class="cfg-icon">🏆</span><label for="inp-l">Matches to win a prize</label></div>
+      <p class="cfg-desc">A ticket wins if at least this many of its numbers are drawn.</p>
+      <div class="num-stepper"><button type="button" data-for="inp-l" data-d="-1">−</button><input id="inp-l" type="number" min="1" max="10" value="3" /><button type="button" data-for="inp-l" data-d="1">+</button></div>
+    </div>
+    <div class="cfg-card summary" id="cfg-summary"></div>
+  </div>
+
+  <div class="alert" id="cfg-error" hidden></div>
+  <div class="panel-actions">
+    <span></span>
+    <button class="btn primary" id="btn-to-picker">Choose psychic numbers →</button>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 2 · PSYCHIC NUMBERS ══════════════ -->
+<section class="panel" id="panel-2" hidden>
+  <h2>Which numbers did the psychic see?</h2>
+  <p class="panel-sub" id="pick-sub">Tap the numbers your psychic channelled. Pick as many or as few as the spirits allow.</p>
+
+  <div class="pick-toolbar">
+    <div class="chip" id="pick-count">0 selected</div>
+    <div class="toolbar-btns">
+      <button class="btn ghost" id="btn-quickpick">✨ Channel 15 random numbers</button>
+      <button class="btn ghost" id="btn-clear">Clear</button>
+    </div>
+  </div>
+
+  <div class="pick-grid" id="pick-grid"></div>
+  <div class="note" id="pick-note"></div>
+  <div class="alert" id="pick-error" hidden></div>
+
+  <div class="panel-actions">
+    <button class="btn ghost" data-goto="1">← Back</button>
+    <button class="btn primary" id="btn-solve">🧮 Compute my tickets</button>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 3 · TICKETS ══════════════ -->
+<section class="panel" id="panel-3" hidden>
+  <h2>Your guaranteed ticket set</h2>
+  <p class="panel-sub">The fewest tickets our optimizer could find that make a prize <em>certain</em> — assuming the psychic keeps their promise.</p>
+
+  <div class="progress-wrap" id="solve-progress" hidden>
+    <div class="progress-label" id="solve-status">Warming up…</div>
+    <div class="progress"><div class="progress-fill" id="bar-fill"></div></div>
+  </div>
+
+  <div id="results" hidden>
+    <div class="stat-row">
+      <div class="stat-card gold"><div class="stat-value" id="stat-tickets">–</div><div class="stat-label">tickets to buy</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-wheel">–</div><div class="stat-label">tickets in a full wheel</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-lb">–</div><div class="stat-label">proven minimum possible</div></div>
+      <div class="stat-card ok"><div class="stat-value" id="stat-verified">–</div><div class="stat-label" id="stat-verified-label">scenarios verified</div></div>
+    </div>
+    <div class="savings" id="savings-line"></div>
+    <div class="ticket-grid" id="ticket-grid"></div>
+  </div>
+
+  <div class="alert" id="solve-error" hidden></div>
+
+  <div class="panel-actions">
+    <button class="btn ghost" data-goto="2">← Change numbers</button>
+    <button class="btn primary" id="btn-to-sim" disabled>🎰 Take them to draw night →</button>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 4 · DRAW NIGHT ══════════════ -->
+<section class="panel" id="panel-4" hidden>
+  <h2>Draw night</h2>
+  <p class="panel-sub" id="sim-sub"></p>
+
+  <div class="sim-controls">
+    <div class="segmented" role="group" aria-label="Draw mode">
+      <button class="seg active" id="mode-honest">🎲 Honest universe<small>fully random draw</small></button>
+      <button class="seg" id="mode-psychic">🔮 Psychic delivers<small>promise is honoured</small></button>
+    </div>
+    <button class="btn draw" id="btn-draw"><span class="draw-icon">🎱</span> DRAW THE NUMBERS</button>
+  </div>
+
+  <div class="draw-stage">
+    <div class="draw-balls" id="draw-balls"></div>
+    <div class="psychic-report" id="psychic-report" hidden></div>
+    <div class="outcome" id="outcome" hidden></div>
+  </div>
+
+  <div class="sim-stats">
+    <div class="mini-stat"><span id="stat-plays">0</span> draws</div>
+    <div class="mini-stat win"><span id="stat-wins">0</span> wins</div>
+    <div class="mini-stat"><span id="stat-lucky">0</span> lucky wins</div>
+    <div class="mini-stat gold"><span id="stat-guarantee">–</span> guarantee record</div>
+  </div>
+
+  <h3 class="tickets-h" id="sim-tickets-h" hidden>Your tickets on the night</h3>
+  <div class="ticket-grid" id="sim-tickets"></div>
+
+  <div class="history" id="history"></div>
+
+  <div class="panel-actions">
+    <button class="btn ghost" data-goto="3">← Back to tickets</button>
+    <button class="btn ghost" id="btn-restart">Start over</button>
+  </div>
+</section>
+</main>
+
+<footer>
+  <details class="about">
+    <summary>📐 The math under the hood</summary>
+    <div class="about-body">
+      <p>This is the <strong>“psychic modeling”</strong> problem from Steven Skiena's <em>Algorithm Design Manual</em>. If a psychic guarantees that at least <b>j</b> of their <b>n</b> chosen numbers will be among the <b>t</b> drawn, then since your tickets only use the psychic's numbers, the only thing that matters is <em>which j of the n</em> come true. The worst case is exactly <b>j</b>, so there are <b>C(n, j)</b> scenarios to defend against, and you win if some ticket shares at least <b>l</b> numbers with the scenario.</p>
+      <p>Choosing the fewest tickets whose coverage spans every scenario is the classic NP-hard <strong>set cover</strong> problem. This site runs a greedy approximation (pick the ticket covering the most unprotected scenarios, repeat), randomized restarts, and a redundancy pruner — right in your browser. It also computes the counting lower bound <b>⌈C(n,j) ⁄ coverage-per-ticket⌉</b> so you can see how close the answer is to provably optimal, and an independent verifier re-checks every scenario before showing you the tickets.</p>
+      <p>Skiena's team first modelled this wrongly — covering all C(n,l) triples — and got nearly twice as many tickets. The fix (“cover every j-subset, not every l-subset”) is the whole moral of the war story: <em>model the problem correctly before solving it</em>.</p>
+    </div>
+  </details>
+  <p class="foot-line">Built as an algorithms portfolio project · <a href="https://github.com/idhanth17/Lottery_Simulator" target="_blank" rel="noopener">github.com/idhanth17/Lottery_Simulator</a> · Not gambling advice. Psychics remain unverified. 🔮</p>
+</footer>
+
+<script src="js/solver.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
